@@ -1,0 +1,42 @@
+name: Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Cache environment
+        uses: actions/cache@v2.1.1
+        with:
+            path: "~/valgrind"
+            key: ${{secrets.VALGRIND_VERSION}}
+      
+      - name: Install environment
+        run: apt-get install -y gawk wget git-core diffstat unzip texinfo gcc-multilib build-essential chrpath socat cpio python3 python3-pip python3-pexpect xz-utils debianutils iputils-ping python3-git python3-jinja2 libegl1-mesa libsdl1.2-dev pylint3 xterm make xsltproc docbook-utils fop dblatex xmlto
+      
+      - name: Install repo
+        run: |
+          mkdir ~/bin
+          PATH=~/bin:$PATH
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+          chmod a+x ~/bin/repo
+          gpg --recv-key 8BB9AD793E8E6153AF0F9A4416530D5E920F5C65
+          curl https://storage.googleapis.com/git-repo-downloads/repo.asc | gpg --verify - ~/bin/repo
+
+      - name: Fetching code
+        run: |
+          repo init --repo-branch=repo-1 -u https://github.com/lgirdk/manifests-ofw.git -m ofw-2009-oe31.xml
+          repo sync --no-clone-bundle
+      
+      - name: Build
+        run: |
+          MACHINE="exm-qemuarm" source ./meta-mng/setup-environment
+          bitbake mng-image-rdkb
